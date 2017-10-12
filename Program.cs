@@ -33,7 +33,7 @@ namespace TXTCtrl
                     {
                         Dictionary<string, object> dic = JsonConvert.DeserializeObject<Dictionary<string, object>>(m.Groups[2].Value);
                         string hospid = string.Empty;
-                        string phone=string.Empty;
+                        string phone = string.Empty;
                         if (dic.Keys.Contains("request"))
                         {
                             Dictionary<string, string> dicRequest = JsonConvert.DeserializeObject<Dictionary<string, string>>(dic["request"].ToString());
@@ -41,12 +41,12 @@ namespace TXTCtrl
                             {
                                 hospid = dicRequest["hospid"];
                             }
-                            if(dicRequest.Keys.Contains("phone"))
+                            if (dicRequest.Keys.Contains("phone"))
                             {
-                                phone=dicRequest["phone"];
+                                phone = dicRequest["phone"];
                             }
                         }
-                        list.Add(new Entity(m.Groups[1].Value, m.Groups[2].Value, m.Groups[3].Value,hospid,phone));
+                        list.Add(new Entity(m.Groups[1].Value, m.Groups[2].Value, m.Groups[3].Value, hospid, phone));
                     }
                 }
             }
@@ -62,23 +62,21 @@ namespace TXTCtrl
         //统计每家医院每秒调用次数
         public static void HospStatistics(List<Entity> list)
         {
-            // foreach (Entity e in list)
-            // {
-            //     Dictionary<string, object> dic = JsonConvert.DeserializeObject<Dictionary<string, object>>(e.json);
-            //     if (dic.Keys.Contains("request"))
-            //     {
-            //         Console.WriteLine("time:" + e.time);
-            //         Dictionary<string, string> dichosp = JsonConvert.DeserializeObject<Dictionary<string, string>>(dic["request"].ToString());
-            //         if (dichosp.Keys.Contains("hospid"))
-            //         {
-            //             Console.WriteLine("hosptitalid:" + dichosp["hospid"]);
-            //         }
-            //         Console.WriteLine("url:" + e.url);
-            //         Console.WriteLine();
-            //     }
-            // }
-
-        
+            var s = from e in list group e by e.url;
+            list.GroupBy(
+                e => e.url,
+                 (url, urlGroup) => new
+                 {
+                     url,
+                     hospGroups =
+                      urlGroup.GroupBy(
+                        e2 => e2.hospid,
+                         (hospid, hospGroup) => new
+                         {
+                             hospid,
+                             times=hospGroup.Select(v=>v.time)
+                         })
+                 });
         }
     }
 
