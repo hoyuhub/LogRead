@@ -62,21 +62,59 @@ namespace TXTCtrl
         //统计每家医院每秒调用次数
         public static void HospStatistics(List<Entity> list)
         {
-            var s = from e in list group e by e.url;
+            var result =
             list.GroupBy(
-                e => e.url,
-                 (url, urlGroup) => new
-                 {
-                     url,
-                     hospGroups =
-                      urlGroup.GroupBy(
-                        e2 => e2.hospid,
-                         (hospid, hospGroup) => new
-                         {
-                             hospid,
-                             times=hospGroup.Select(v=>v.time)
-                         })
-                 });
+                 e => e.url,
+                  (url, urlGroup) => new
+                  {
+                      url,
+                      hospGroups = urlGroup
+                      .GroupBy(
+                         e2 => e2.hospid,
+                          (hospid, hospGroup) => new
+                          {
+                              hospid,
+                              timeGroups = hospGroup
+                              .OrderBy(e3 => e3.time)
+                              .GroupBy(e3 => e3.time)
+                              .Select(g => new { time = g.Key, count = g.Count() })
+                          }
+                          ).Select(e4 => new
+                          {
+                              hospid = e4.hospid,
+                              timeGroups = e4.timeGroups,
+                              timeGroupsCount = e4.timeGroups.Count()
+                          }
+                                 )
+                  }
+                  ).Select(s => new
+                  {
+                      url = s.url,
+                      hospGroups = s.hospGroups
+                  }
+                        );
+
+            List<Counts> listCounts = new List<Counts>();
+            List<Dictionary<string,string>> listDayCount=new List<Dictionary<string, string>>();
+            foreach (var e in result)
+            {
+                foreach (var e2 in e.hospGroups)
+                {
+                    int dayCount = 0;
+                    foreach (var e3 in e2.timeGroups)
+                    {
+                        listCounts.Add(new Counts(e.url, e2.hospid, e3.count, e3.time));
+                        dayCount += e3.count;
+                    }
+                    Dictionary<string,string> dic=new Dictionary<string,string>();
+                    dic.Add("url",e.url);
+                    dic.Add("hospid",e2.hospid);
+                    dic.Add("dayCount",dayCount.ToString());
+                    listDayCount.Add(dic);
+                }
+            }
+
+            listDayCount.ForEach(d=>Console.WriteLine(d["url"]+" "+d["hospid"]+" "+d["dayCount"]));
         }
     }
 
@@ -97,6 +135,24 @@ namespace TXTCtrl
         public string hospid { get; set; }
         public string json { get; set; }
         public string url { get; set; }
+    }
+
+
+    public class Counts
+    {
+        public Counts() { }
+        public Counts(string url, string hospid, int count, string time)
+        {
+            this.url = url;
+            this.hospid = hospid;
+            this.count = count;
+            this.time = time;
+        }
+        public string url { get; set; }
+        public string hospid { get; set; }
+        public string time { get; set; }
+        public int count { get; set; }
+
     }
 
 }
