@@ -14,6 +14,7 @@ namespace TXTCtrl
         {
             Console.WriteLine("Hello World!");
             HospStatistics(Read());
+            PhoneSendCounts(Read(), 30, "18601155960");
         }
 
         //需要指定文件路径（包括文件名称）
@@ -46,17 +47,42 @@ namespace TXTCtrl
                                 phone = dicRequest["phone"];
                             }
                         }
-                        list.Add(new Entity(m.Groups[1].Value, m.Groups[2].Value, m.Groups[3].Value, hospid, phone));
+                        list.Add(new Entity(Convert.ToDateTime(m.Groups[1].Value), m.Groups[2].Value, m.Groups[3].Value, hospid, phone));
                     }
                 }
             }
             return list;
         }
 
-        public static void Ctrl(List<string[]> list)
+        //按手机号统计一段时间内短讯发送接口的调用此时
+        //时间单位：分钟
+        public static List<Dictionary<string, string>> PhoneSendCounts(List<Entity> list, int minute, string phone = "null", string url = "null")
         {
+            //DateTime dt = DateTime.Now.AddMinutes(-minute);
+            DateTime dt = Convert.ToDateTime("2017-10-11 14:49:10");
+            List<Dictionary<string, string>> listDic = new List<Dictionary<string, string>>();
 
-            var obj = from r in list group r by r[r.Length - 1];
+            if (url == "null") { }
+            if (phone == "null")
+            {
+                var Counts = list.Where(d => d.time > dt && d.url == (url == "null" ? "sms/send" : url)).GroupBy(d => d.phone).Select(d => new { phone = d.Key, count = d.Count() });
+                foreach (var d in Counts)
+                {
+                    Dictionary<string, string> dic = new Dictionary<string, string>();
+                    dic.Add("phone", d.phone);
+                    dic.Add("count", d.count.ToString());
+                    listDic.Add(dic);
+                }
+            }
+            else
+            {
+                var Counts = list.Where(d => d.time > dt && d.phone == phone && d.url == (url == "null" ? "sms/send" : url)).Count();
+                Dictionary<string, string> dic = new Dictionary<string, string>();
+                dic.Add("phone", phone);
+                dic.Add("count", Counts.ToString());
+                listDic.Add(dic);
+            }
+            return listDic;
         }
 
         //统计每家医院每秒调用次数
@@ -95,7 +121,7 @@ namespace TXTCtrl
                         );
 
             List<Counts> listCounts = new List<Counts>();
-            List<Dictionary<string,string>> listDayCount=new List<Dictionary<string, string>>();
+            List<Dictionary<string, string>> listDayCount = new List<Dictionary<string, string>>();
             foreach (var e in result)
             {
                 foreach (var e2 in e.hospGroups)
@@ -106,15 +132,15 @@ namespace TXTCtrl
                         listCounts.Add(new Counts(e.url, e2.hospid, e3.count, e3.time));
                         dayCount += e3.count;
                     }
-                    Dictionary<string,string> dic=new Dictionary<string,string>();
-                    dic.Add("url",e.url);
-                    dic.Add("hospid",e2.hospid);
-                    dic.Add("dayCount",dayCount.ToString());
+                    Dictionary<string, string> dic = new Dictionary<string, string>();
+                    dic.Add("url", e.url);
+                    dic.Add("hospid", e2.hospid);
+                    dic.Add("dayCount", dayCount.ToString());
                     listDayCount.Add(dic);
                 }
             }
 
-            listDayCount.ForEach(d=>Console.WriteLine(d["url"]+" "+d["hospid"]+" "+d["dayCount"]));
+            listDayCount.ForEach(d => Console.WriteLine(d["url"] + " " + d["hospid"] + " " + d["dayCount"]));
         }
     }
 
@@ -122,7 +148,7 @@ namespace TXTCtrl
     public class Entity
     {
         public Entity() { }
-        public Entity(string time, string json, string url, string hospid, string phone)
+        public Entity(DateTime time, string json, string url, string hospid, string phone)
         {
             this.time = time;
             this.json = json;
@@ -131,7 +157,7 @@ namespace TXTCtrl
             this.phone = phone;
         }
         public string phone { get; set; }
-        public string time { get; set; }
+        public DateTime time { get; set; }
         public string hospid { get; set; }
         public string json { get; set; }
         public string url { get; set; }
@@ -141,7 +167,7 @@ namespace TXTCtrl
     public class Counts
     {
         public Counts() { }
-        public Counts(string url, string hospid, int count, string time)
+        public Counts(string url, string hospid, int count, DateTime time)
         {
             this.url = url;
             this.hospid = hospid;
@@ -150,7 +176,7 @@ namespace TXTCtrl
         }
         public string url { get; set; }
         public string hospid { get; set; }
-        public string time { get; set; }
+        public DateTime time { get; set; }
         public int count { get; set; }
 
     }
